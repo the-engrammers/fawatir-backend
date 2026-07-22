@@ -10,21 +10,29 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / '.env')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-%7#h23uf5ebw)le6%m!mn7p*t9q6+(jd6a*(00*6d7y0y7-sls'
 
+# AI service configuration (used by the `ai` app)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Dev-only: '*' allows LAN access (e.g. from a phone on the same WiFi) for
+# testing the scanner UI. Tighten this before any real deployment.
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -35,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
     # Third-party apps
     'corsheaders',
     'rest_framework',
@@ -43,6 +50,7 @@ INSTALLED_APPS = [
     
     # Internal apps
     'api',
+    'ai',
 ]
 
 MIDDLEWARE = [
@@ -123,6 +131,10 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Media files (uploaded invoice documents)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ==========================================
 # CUSTOM CONFIGURATIONS
