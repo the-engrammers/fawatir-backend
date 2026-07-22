@@ -1,10 +1,15 @@
 import io
 import json
 import re
+from typing import Optional
 
 import pandas as pd
-import requests
 from django.conf import settings
+import google.generativeai as genai
+from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, Field
+from typing import Optional, Literal
 
 MAX_PROMPT_ROWS = 5  # sample rows shown to the model for context
 
@@ -21,25 +26,22 @@ Voici les en-tetes de colonnes du fichier, suivies de quelques lignes d'exemple 
 {sample_rows}
 </exemples>
 
-Analyse ce contenu et renvoie UNIQUEMENT un objet JSON strict (aucun texte autour, aucun bloc \
-markdown), avec exactement cette forme :
-
-{{
-  "data_type": string (court, ex: "products", "suppliers", "clients", "inventory", "other"),
-  "columns": [
-    {{
-      "source_column": string (recopie exactement l'en-tete d'origine),
-      "field_name": string (nom technique propre, en anglais, snake_case, ex: "unit_price") ou null si la colonne doit etre ignoree,
-      "label": string (libelle humain, peut garder la langue d'origine)
-    }}
-  ]
-}}
-
+Analyse ce contenu et renvoie un objet JSON decrivant le type de donnees et le mapping. \
 Il doit y avoir exactement un objet dans "columns" pour CHAQUE en-tete fourni, dans le meme ordre. \
 Utilise le contenu des exemples pour deviner le sens d'une colonne si son en-tete est ambigu ou \
 abrege (ex: une colonne de nombres comme "5.99, 12.50, 3.00" est probablement un prix). \
 N'utilise jamais un field_name qui n'est pas un identifiant valide (minuscules, chiffres, \
 underscores uniquement)."""
+
+
+class ColumnMapping(BaseModel):
+    source_column: str = Field(description="Exact original header")
+    field_name: Optional[str] = Field(description="Snake_case technical name or null if ignored")
+    label: str = Field(description="Human readable label")
+
+class MappingResponse(BaseModel):
+    data_type: Literal['products', 'suppliers', 'clients', 'inventory', 'other'] = Field(description="Classification")
+    columns: list[ColumnMapping]
 
 
 class SpreadsheetError(Exception):
@@ -79,16 +81,6 @@ def parse_spreadsheet(file_bytes):
     return headers, rows
 
 
-def _parse_json_response(text):
-    cleaned = text.strip()
-    cleaned = re.sub(r'^```(json)?', '', cleaned).strip()
-    cleaned = re.sub(r'```$', '', cleaned).strip()
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise SpreadsheetError(f'Local model did not return valid JSON: {exc}') from exc
-
-
 def _slugify(text):
     slug = re.sub(r'[^a-z0-9]+', '_', str(text).strip().lower()).strip('_')
     return slug or 'column'
@@ -108,59 +100,64 @@ def _fallback_columns(headers):
     return columns
 
 
-def _validate_columns(headers, columns):
-    if not isinstance(columns, list) or len(columns) != len(headers):
-        return None
-
-    seen = set()
-    result = []
-    for header, col in zip(headers, columns):
-        if not isinstance(col, dict):
-            return None
-        field_name = col.get('field_name')
-        if field_name:
-            field_name = re.sub(r'[^a-z0-9_]', '_', str(field_name).lower()).strip('_') or None
-        if field_name:
-            while field_name in seen:
-                field_name = f'{field_name}_2'
-            seen.add(field_name)
-        label = col.get('label') or header
-        result.append({'source_column': header, 'field_name': field_name, 'label': label})
-    return result
-
-
 def propose_mapping(headers, sample_rows):
-    """Asks the local model to classify the data and propose a clean column mapping.
+    """Asks the Gemini model to classify the data and propose a clean column mapping.
 
     Never raises on a malformed model response — falls back to a slugified mapping instead,
     since the human review step (not this function) is the real safety net.
     """
+    if not settings.GEMINI_API_KEY:
+        # Fallback to simple slugification if API key is not configured
+        return {'data_type': 'other', 'columns': _fallback_columns(headers)}
+
+    genai.configure(api_key=settings.GEMINI_API_KEY, transport="rest")
+    model = genai.GenerativeModel('gemini-flash-latest')
+
     prompt = MAPPING_PROMPT_TEMPLATE.format(
         headers=json.dumps(headers, ensure_ascii=False),
         sample_rows=json.dumps(sample_rows[:MAX_PROMPT_ROWS], ensure_ascii=False, default=str),
     )
-    url = f'{settings.OLLAMA_BASE_URL}/api/generate'
-    payload = {
-        'model': settings.OLLAMA_MODEL,
-        'prompt': prompt,
-        'format': 'json',
-        'stream': False,
-        'options': {'temperature': 0},
-    }
-    try:
-        response = requests.post(url, json=payload, timeout=300)
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise SpreadsheetError(f'Ollama request failed (is `ollama serve` running?): {exc}') from exc
 
     try:
-        parsed = _parse_json_response(response.json().get('response', ''))
-    except SpreadsheetError:
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=MappingResponse,
+                temperature=0.0,
+            )
+        )
+        parsed = json.loads(response.text)
+    except Exception:
+        # Silently catch exceptions to fallback safely instead of crashing the UI
         parsed = None
 
     data_type = parsed.get('data_type') if isinstance(parsed, dict) else None
-    columns = _validate_columns(headers, parsed.get('columns') if isinstance(parsed, dict) else None)
-    if columns is None:
+    columns = parsed.get('columns') if isinstance(parsed, dict) else None
+
+    # Guarantee uniqueness of field_names
+    if isinstance(columns, list):
+        seen = set()
+        clean_columns = []
+        for col in columns:
+            if not isinstance(col, dict):
+                continue
+            field_name = col.get('field_name')
+            if field_name:
+                field_name = re.sub(r'[^a-z0-9_]', '_', str(field_name).lower()).strip('_') or None
+            if field_name:
+                while field_name in seen:
+                    field_name = f'{field_name}_2'
+                seen.add(field_name)
+            
+            clean_columns.append({
+                'source_column': col.get('source_column'),
+                'field_name': field_name,
+                'label': col.get('label')
+            })
+        columns = clean_columns
+
+    if not columns or len(columns) != len(headers):
         columns = _fallback_columns(headers)
 
     return {'data_type': data_type or 'other', 'columns': columns}
