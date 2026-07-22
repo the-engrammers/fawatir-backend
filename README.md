@@ -20,13 +20,3 @@ fawatir_backend/
     └── urls.py                # API Endpoint routes
 
 
-Team Assignments
-@Fati (Database): The api/models.py file is your domain. This is where your PostgreSQL MCD is translated into Python code.
-
-@Zineb (Frontend) & @Meryem (AI): You both will care about two files:
-
-api/urls.py: This defines the exact endpoint links you will use to fetch or push data (e.g., http://127.0.0.1:8000/api/clients/).
-
-api/serializers.py: This defines the exact JSON formats and contracts you will receive and need to send.
-
-@Omar (DevOps/Integrations): The fawatir_backend/settings.py file is where you will eventually plug in the Docker configurations, production database credentials, and security settings.
