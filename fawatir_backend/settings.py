@@ -14,144 +14,171 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# Load environment variables
+load_dotenv(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%7#h23uf5ebw)le6%m!mn7p*t9q6+(jd6a*(00*6d7y0y7-sls'
-
-# AI service configuration (used by the `ai` app)
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+SECRET_KEY = "django-insecure-%7#h23uf5ebw)le6%m!mn7p*t9q6+(jd6a*(00*6d7y0y7-sls"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# Dev-only: '*' allows LAN access (e.g. from a phone on the same WiFi) for
-# testing the scanner UI. Tighten this before any real deployment.
-ALLOWED_HOSTS = ['*']
+# Dev only
+ALLOWED_HOSTS = ["*"]
 
-# Application definition
+# API Keys
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# ==========================================================
+# APPLICATIONS
+# ==========================================================
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    # Third-party apps
-    'corsheaders',
-    'rest_framework',
-    'drf_spectacular',
-    
-    # Internal apps
-    'api',
-    'ai',
+    # Django Apps
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # Third-party Apps
+    "corsheaders",
+    "rest_framework",
+    "drf_spectacular",
+
+    # Local Apps
+    "api",
+    "ai",
 ]
+
+# ==========================================================
+# MIDDLEWARE
+# ==========================================================
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'fawatir_backend.urls'
+ROOT_URLCONF = "fawatir_backend.urls"
+
+# ==========================================================
+# TEMPLATES
+# ==========================================================
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'fawatir_backend.wsgi.application'
+WSGI_APPLICATION = "fawatir_backend.wsgi.application"
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# ==========================================================
+# DATABASE
+# ==========================================================
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+# ==========================================================
+# PASSWORD VALIDATION
+# ==========================================================
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+# ==========================================================
+# INTERNATIONALIZATION
+# ==========================================================
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
+# ==========================================================
+# STATIC FILES
+# ==========================================================
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+# ==========================================================
+# MEDIA FILES
+# ==========================================================
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
-# Media files (uploaded invoice documents)
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# ==========================================================
+# DEFAULT PRIMARY KEY
+# ==========================================================
 
-# ==========================================
-# CUSTOM CONFIGURATIONS
-# ==========================================
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# CORS Configuration (Allows frontend to communicate with backend)
+# ==========================================================
+# CORS
+# ==========================================================
+
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Django REST Framework Configuration
+# ==========================================================
+# DJANGO REST FRAMEWORK
+# ==========================================================
+
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-# Swagger/Spectacular Configuration
+# ==========================================================
+# SWAGGER / API DOCUMENTATION
+# ==========================================================
+
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'FawatirAI API',
-    'DESCRIPTION': 'Complete API documentation for the FawatirAI backend modules.',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+    "TITLE": "FawatirAI API",
+    "DESCRIPTION": "Complete API documentation for the FawatirAI backend modules.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
